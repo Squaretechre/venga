@@ -1,4 +1,6 @@
-namespace Venga.Tests
+using Venga.Tests.Commands;
+
+namespace Venga.Tests.Handlers
 {
     public class FakeLoggingBarHandler : HandleCommand<BarCommand>
     {

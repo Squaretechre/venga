@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Venga.Tests.Commands;
 
-namespace Venga.Tests
+namespace Venga.Tests.Handlers
 {
     public class CompositeHandler : HandleCommand<BarCommand>
     {

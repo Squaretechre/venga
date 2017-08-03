@@ -1,4 +1,4 @@
-namespace Venga.Tests
+namespace Venga.Tests.Commands
 {
     public class BarCommand
     {

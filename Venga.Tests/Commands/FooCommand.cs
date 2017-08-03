@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Venga.Tests
+namespace Venga.Tests.Commands
 {
     public class FooCommand
     {
