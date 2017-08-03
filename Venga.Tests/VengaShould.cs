@@ -12,35 +12,87 @@ namespace Venga.Tests
             var command = new FooCommand();
 
             var venga = new Venga();
-            var fakeHandler = new FakeHandler();
 
-            venga.RegisterHandler(fakeHandler);
+            venga.RegisterHandler(new FooHandler());
             venga.Handle(command);
-            Assert.True(fakeHandler.WasCalled);
+            Assert.True(command.WasHandled);
         }
+
+        [Fact]
+        public void forward_correct_command_to_handler()
+        {
+            var command = new BarCommand();
+
+            var venga = new Venga();
+
+            venga.RegisterHandler(new BarHandler());
+            venga.Handle(command);
+
+            Assert.True(command.WasHandled);
+        }
+    }
+
+    public class BarHandler : IHandleCommand<BarCommand>
+    {
+        public void Handle(BarCommand command)
+        {
+            command.WasHandled = true;
+        }
+    }
+
+    public interface IHandleCommand<T> 
+    {
+        void Handle(T command);
+    }
+
+    public class BarCommand
+    {
+        public bool WasHandled { get; set; }
     }
 
     public class Venga
     {
-        private readonly List<FakeHandler> _handlers = new List<FakeHandler>();
+        private readonly List<FooHandler> _fooHandlers = new List<FooHandler>();
+        private readonly List<object> _handlers = new List<object>(); 
 
-        public void Handle(FooCommand command)
+        public void Handle(object command)
         {
-            _handlers.First().WasCalled = true; 
+            if (command is FooCommand)
+            {
+                var fooHandler = (FooHandler)_fooHandlers.First();
+                fooHandler.Handle((FooCommand) command);
+            }
+            else
+            {
+                var barHandler = (BarHandler)_handlers.First();
+                barHandler.Handle((BarCommand) command);
+            }
         }
 
-        public void RegisterHandler(FakeHandler fakeHandler)
+        public void RegisterHandler<T>(IHandleCommand<T> fooHandler) 
         {
-            _handlers.Add(fakeHandler);
+            if (fooHandler is FooHandler)
+            {
+                _fooHandlers.Add((FooHandler) fooHandler);
+            }
+            else
+            {
+                _handlers.Add((object)fooHandler);
+            }
         }
     }
 
     public class FooCommand
     {
+        public bool WasHandled { get; set; }
     }
 
-    public class FakeHandler
+    public class FooHandler : IHandleCommand<FooCommand>
     {
-        public bool WasCalled { get; set; }
+
+        public void Handle(FooCommand command)
+        {
+            command.WasHandled = true;
+        }
     }
 }
