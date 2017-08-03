@@ -5,6 +5,7 @@ namespace Venga.Tests
         public void Handle(FooCommand command)
         {
             command.WasHandled = true;
+            command.WasHandledBy.Add(this);
         }
     }
 }

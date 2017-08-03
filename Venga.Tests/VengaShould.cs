@@ -40,6 +40,33 @@ namespace Venga.Tests
             Assert.True(barCommand.WasHandled);
             Assert.True(barCommand.WasLogged);
         }
+
+        [Fact]
+        public void forward_same_command_to_multiple_different_handlers()
+        {
+            var venga = new Venga();
+
+            var command = new FooCommand();
+
+            var aFooHandler = new FooHandler();
+            var anotherFooHandler = new OtherFooHandler();
+
+            venga.RegisterHandler(aFooHandler);
+            venga.RegisterHandler(anotherFooHandler);
+
+            venga.Handle(command);
+
+            Assert.True(command.WasHandledBy.Any(handler => handler is FooHandler));
+            Assert.True(command.WasHandledBy.Any(handler => handler is OtherFooHandler));
+        }
+    }
+
+    public class OtherFooHandler : HandleCommand<FooCommand>
+    {
+        public void Handle(FooCommand command)
+        {
+            command.WasHandledBy.Add(this);
+        }
     }
 
     public interface HandleCommand<in T>
@@ -54,11 +81,14 @@ namespace Venga.Tests
         public void Handle(object command)
         {
             var commandType = command.GetType();
-            var targetHandler = _handlers.First(handler => HandlerThatCanHandleCommandType(handler, commandType));
+            var targetHandlers = _handlers.Where(handler => HandlerThatCanHandleCommandType(handler, commandType));
 
-            var handlerType = targetHandler.GetType();
-            var handleMethodInfo = handlerType.GetMethod("Handle");
-            handleMethodInfo.Invoke(targetHandler, new[] {command});
+            foreach (var targetHandler in targetHandlers)
+            {
+                var handlerType = targetHandler.GetType();
+                var handleMethodInfo = handlerType.GetMethod("Handle");
+                handleMethodInfo.Invoke(targetHandler, new[] { command });
+            }
         }
 
         private static bool HandlerThatCanHandleCommandType(object handler, Type commandType) 
