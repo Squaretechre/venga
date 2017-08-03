@@ -9,20 +9,6 @@ namespace Venga.Tests
     public class VengaShould
     {
         [Fact]
-        public void forward_baz_command_to_baz_handler()
-        {
-            var command = new BazCommand();
-
-            var venga = new Venga();
-
-            var bazHandler = new BazHandler();
-            venga.RegisterHandler(bazHandler);
-            venga.Handle(command);
-
-            Assert.True(command.WasHandled);
-        }
-
-        [Fact]
         public void forward_command_to_handler()
         {
             var command = new FooCommand();
@@ -35,16 +21,24 @@ namespace Venga.Tests
         }
 
         [Fact]
-        public void forward_correct_command_to_handler()
+        public void forward_command_to_composite_handler()
         {
-            var command = new BarCommand();
+            var barCommand = new BarCommand();
 
             var venga = new Venga();
 
-            venga.RegisterHandler(new BarHandler());
-            venga.Handle(command);
+            var handlers = new List<HandleCommand<BarCommand>>
+            {
+                new BarHandler(),
+                new FakeLoggingBarHandler()
+            };
 
-            Assert.True(command.WasHandled);
+            var compositeHandler = new CompositeHandler(handlers);
+            venga.RegisterHandler(compositeHandler);
+            venga.Handle(barCommand);
+
+            Assert.True(barCommand.WasHandled);
+            Assert.True(barCommand.WasLogged);
         }
     }
 
@@ -53,7 +47,7 @@ namespace Venga.Tests
         void Handle(T command);
     }
 
-    public class Venga
+    public class Venga : HandleCommand<object>
     {
         private readonly List<object> _handlers = new List<object>();
 
