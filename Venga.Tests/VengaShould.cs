@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Xunit;
 
 namespace Venga.Tests
@@ -30,6 +32,34 @@ namespace Venga.Tests
 
             Assert.True(command.WasHandled);
         }
+
+        [Fact]
+        public void forward_baz_command_to_baz_handler()
+        {
+            var command = new BazCommand();
+
+            var venga = new Venga();
+
+            var bazHandler = new BazHandler();
+            venga.RegisterHandler(bazHandler);
+            venga.Handle(command);
+
+            Assert.True(command.WasHandled);
+        }
+
+    }
+
+    public class BazHandler : IHandleCommand<BazCommand>
+    {
+        public void Handle(BazCommand command)
+        {
+            command.WasHandled = true;
+        }
+    }
+
+    public class BazCommand
+    {
+        public bool WasHandled { get; set; }
     }
 
     public class BarHandler : IHandleCommand<BarCommand>
@@ -59,13 +89,17 @@ namespace Venga.Tests
         {
             if (command is FooCommand)
             {
-                var fooHandler = (FooHandler)_fooHandlers.First();
+                var fooHandler = _fooHandlers.First();
                 fooHandler.Handle((FooCommand) command);
             }
             else
             {
-                var barHandler = (BarHandler)_handlers.First();
-                barHandler.Handle((BarCommand) command);
+                var commandType = command.GetType();
+                var handler = _handlers.First(h => h.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType);
+
+                var magicType = handler.GetType();
+                var magicMethod = magicType.GetMethod("Handle");
+                magicMethod.Invoke(handler, new[] { command });
             }
         }
 
@@ -77,7 +111,7 @@ namespace Venga.Tests
             }
             else
             {
-                _handlers.Add((object)fooHandler);
+                _handlers.Add(fooHandler);
             }
         }
     }
