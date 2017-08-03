@@ -59,12 +59,35 @@ namespace Venga.Tests
             Assert.True(command.WasHandledBy.Any(handler => handler is FooHandler));
             Assert.True(command.WasHandledBy.Any(handler => handler is OtherFooHandler));
         }
+
+        [Fact]
+        public void throw_if_no_handler_registered_for_command()
+        {
+            var venga = new Venga();
+
+            var command = new FooCommand();
+
+            var exception = Record.Exception(() => venga.Handle(command));
+
+            Assert.NotNull(exception);
+            Assert.IsType<UnhandledCommandException>(exception);
+            Assert.Equal("No handler registered for FooCommand", exception.Message);
+        }
+    }
+
+    public class UnhandledCommandException : Exception
+    {
+        public UnhandledCommandException(string message) : base(message)
+        {
+        }
     }
 
     public class OtherFooHandler : HandleCommand<FooCommand>
     {
-        public void Handle(FooCommand command) 
-            => command.WasHandledBy.Add(this);
+        public void Handle(FooCommand command)
+        {
+            command.WasHandledBy.Add(this);
+        }
     }
 
     public interface HandleCommand<in T>
@@ -81,18 +104,27 @@ namespace Venga.Tests
             var commandType = command.GetType();
             var targetHandlers = _handlers.Where(handler => HandlerThatCanHandleCommandType(handler, commandType));
 
-            foreach (var targetHandler in targetHandlers)
+            var handlers = targetHandlers as object[] ?? targetHandlers.ToArray();
+
+            if (!handlers.Any())
+                throw new UnhandledCommandException($"No handler registered for {commandType.Name}");
+
+            foreach (var targetHandler in handlers)
             {
                 var handlerType = targetHandler.GetType();
                 var handleMethodInfo = handlerType.GetMethod("Handle");
-                handleMethodInfo.Invoke(targetHandler, new[] { command });
+                handleMethodInfo.Invoke(targetHandler, new[] {command});
             }
         }
 
-        private static bool HandlerThatCanHandleCommandType(object handler, Type commandType) 
-            => handler.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType;
+        private static bool HandlerThatCanHandleCommandType(object handler, Type commandType)
+        {
+            return handler.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType;
+        }
 
-        public void RegisterHandler<T>(HandleCommand<T> handler) 
-            => _handlers.Add(handler);
+        public void RegisterHandler<T>(HandleCommand<T> handler)
+        {
+            _handlers.Add(handler);
+        }
     }
 }
