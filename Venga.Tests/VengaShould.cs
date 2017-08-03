@@ -63,10 +63,8 @@ namespace Venga.Tests
 
     public class OtherFooHandler : HandleCommand<FooCommand>
     {
-        public void Handle(FooCommand command)
-        {
-            command.WasHandledBy.Add(this);
-        }
+        public void Handle(FooCommand command) 
+            => command.WasHandledBy.Add(this);
     }
 
     public interface HandleCommand<in T>
