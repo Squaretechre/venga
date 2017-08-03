@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,35 +48,9 @@ namespace Venga.Tests
         }
     }
 
-    public class BazHandler : IHandleCommand<BazCommand>
-    {
-        public void Handle(BazCommand command)
-        {
-            command.WasHandled = true;
-        }
-    }
-
-    public class BazCommand
-    {
-        public bool WasHandled { get; set; }
-    }
-
-    public class BarHandler : IHandleCommand<BarCommand>
-    {
-        public void Handle(BarCommand command)
-        {
-            command.WasHandled = true;
-        }
-    }
-
-    public interface IHandleCommand<T>
+    public interface HandleCommand<in T>
     {
         void Handle(T command);
-    }
-
-    public class BarCommand
-    {
-        public bool WasHandled { get; set; }
     }
 
     public class Venga
@@ -85,29 +60,17 @@ namespace Venga.Tests
         public void Handle(object command)
         {
             var commandType = command.GetType();
-            var handler = _handlers.First(h => h.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType);
+            var targetHandler = _handlers.First(handler => HandlerThatCanHandleCommandType(handler, commandType));
 
-            var handlerType = handler.GetType();
+            var handlerType = targetHandler.GetType();
             var handleMethodInfo = handlerType.GetMethod("Handle");
-            handleMethodInfo.Invoke(handler, new[] {command});
+            handleMethodInfo.Invoke(targetHandler, new[] {command});
         }
 
-        public void RegisterHandler<T>(IHandleCommand<T> fooHandler)
-        {
-            _handlers.Add(fooHandler);
-        }
-    }
+        private static bool HandlerThatCanHandleCommandType(object handler, Type commandType) 
+            => handler.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType;
 
-    public class FooCommand
-    {
-        public bool WasHandled { get; set; }
-    }
-
-    public class FooHandler : IHandleCommand<FooCommand>
-    {
-        public void Handle(FooCommand command)
-        {
-            command.WasHandled = true;
-        }
+        public void RegisterHandler<T>(HandleCommand<T> handler) 
+            => _handlers.Add(handler);
     }
 }
