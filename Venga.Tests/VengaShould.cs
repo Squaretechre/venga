@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +7,20 @@ namespace Venga.Tests
 {
     public class VengaShould
     {
+        [Fact]
+        public void forward_baz_command_to_baz_handler()
+        {
+            var command = new BazCommand();
+
+            var venga = new Venga();
+
+            var bazHandler = new BazHandler();
+            venga.RegisterHandler(bazHandler);
+            venga.Handle(command);
+
+            Assert.True(command.WasHandled);
+        }
+
         [Fact]
         public void forward_command_to_handler()
         {
@@ -32,21 +45,6 @@ namespace Venga.Tests
 
             Assert.True(command.WasHandled);
         }
-
-        [Fact]
-        public void forward_baz_command_to_baz_handler()
-        {
-            var command = new BazCommand();
-
-            var venga = new Venga();
-
-            var bazHandler = new BazHandler();
-            venga.RegisterHandler(bazHandler);
-            venga.Handle(command);
-
-            Assert.True(command.WasHandled);
-        }
-
     }
 
     public class BazHandler : IHandleCommand<BazCommand>
@@ -70,7 +68,7 @@ namespace Venga.Tests
         }
     }
 
-    public interface IHandleCommand<T> 
+    public interface IHandleCommand<T>
     {
         void Handle(T command);
     }
@@ -82,37 +80,21 @@ namespace Venga.Tests
 
     public class Venga
     {
-        private readonly List<FooHandler> _fooHandlers = new List<FooHandler>();
-        private readonly List<object> _handlers = new List<object>(); 
+        private readonly List<object> _handlers = new List<object>();
 
         public void Handle(object command)
         {
-            if (command is FooCommand)
-            {
-                var fooHandler = _fooHandlers.First();
-                fooHandler.Handle((FooCommand) command);
-            }
-            else
-            {
-                var commandType = command.GetType();
-                var handler = _handlers.First(h => h.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType);
+            var commandType = command.GetType();
+            var handler = _handlers.First(h => h.GetType().GetInterfaces()[0].GenericTypeArguments[0] == commandType);
 
-                var magicType = handler.GetType();
-                var magicMethod = magicType.GetMethod("Handle");
-                magicMethod.Invoke(handler, new[] { command });
-            }
+            var handlerType = handler.GetType();
+            var handleMethodInfo = handlerType.GetMethod("Handle");
+            handleMethodInfo.Invoke(handler, new[] {command});
         }
 
-        public void RegisterHandler<T>(IHandleCommand<T> fooHandler) 
+        public void RegisterHandler<T>(IHandleCommand<T> fooHandler)
         {
-            if (fooHandler is FooHandler)
-            {
-                _fooHandlers.Add((FooHandler) fooHandler);
-            }
-            else
-            {
-                _handlers.Add(fooHandler);
-            }
+            _handlers.Add(fooHandler);
         }
     }
 
@@ -123,7 +105,6 @@ namespace Venga.Tests
 
     public class FooHandler : IHandleCommand<FooCommand>
     {
-
         public void Handle(FooCommand command)
         {
             command.WasHandled = true;
